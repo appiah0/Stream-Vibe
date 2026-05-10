@@ -1,184 +1,130 @@
-# 🎬 OnStream – Free Streaming PWA
+# 🎬 OnStream v2 – Free Streaming PWA
 
-A full-featured streaming discovery app built with **React + Vite**, deployable to **Vercel**, installable as a **PWA** (Progressive Web App) — works like a native app on Android & iOS.
-
-> **Disclaimer:** This project is for educational/demo purposes only. It uses the free TMDB API for metadata and embeds publicly available third-party player services. It does not host any video content.
+Watch movies & TV shows **inside the app** (no redirects), download them, and use it offline — installable as a home screen app on Android & iOS.
 
 ---
 
-## ✨ Features
+## ✨ What's New in v2
 
-| Feature | Details |
-|---|---|
-| 🔍 **Universal Search** | Searches across all movies & TV shows via TMDB API |
-| 📡 **7 Embed Servers** | VidSrc, VidSrc2, 2Embed, AutoEmbed, VidLink, EmbedSu + auto-retry |
-| 🎬 **Movies & TV Shows** | Trending, Popular, Top Rated, Now Playing, Airing Today |
-| 📺 **Season/Episode Selector** | Full episode picker for every TV show |
-| 🎭 **Genre Filtering** | Filter by any genre with pagination |
-| ❤️ **My List** | Save favorites (persisted in localStorage) |
-| 🕐 **Watch History** | Auto-tracks what you've watched |
-| 🎞️ **Detail Modal** | Cast, trailers, similar titles, full info |
-| 📲 **PWA / Install to Home Screen** | Works on Android, iOS, Desktop |
-| 🌙 **Offline Support** | Caches API & images via Service Worker |
-| 📱 **Mobile-first UI** | Bottom nav, safe areas, touch-optimized |
+- ▶️ **In-app player** — video plays inside OnStream, never redirects you elsewhere
+- ⬇️ **Download button** — download any movie in 720p or 1080p
+- 📱 **4 clean tabs** — Home · Movies · TV Shows · My List
+- 🔌 **Offline support** — cached content works without internet
+- 🔀 **7 servers** — auto-switch if one is down
+- 📺 **Season/Episode picker** — full TV show episode navigation
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Deploy (Mobile-friendly steps)
 
-### 1. Get a free TMDB API key
+### 1. Get your FREE TMDB API key
 
-1. Go to [https://www.themoviedb.org/signup](https://www.themoviedb.org/signup) and create a free account
-2. Visit [https://www.themoviedb.org/settings/api](https://www.themoviedb.org/settings/api)
-3. Click **"Create"** → select **"Developer"** → fill the form
-4. Copy your **API Key (v3 auth)**
+1. Open [themoviedb.org](https://www.themoviedb.org) on your phone
+2. Sign up (free) → tap your avatar → **Settings → API**
+3. Tap **Create → Developer** → fill the short form
+4. Copy your **API Key (v3 auth)** — a long string of letters/numbers
 
-### 2. Clone & run locally
+### 2. Upload to GitHub (from your phone)
 
-```bash
-git clone https://github.com/YOUR_USERNAME/onstream.git
-cd onstream
-npm install
+1. Go to [github.com](https://github.com) → sign in → tap **+** → **New repository**
+2. Name it `onstream` → tap **Create repository**
+3. Unzip `onstream.zip` on your phone
+4. In the repo, tap **Add file → Upload files**
+5. Upload everything from the unzipped folder — all files and folders
 
-# Create your env file
-cp .env.example .env
-# Edit .env and paste your TMDB key:
-# VITE_TMDB_API_KEY=your_key_here
+### 3. Deploy on Vercel (from your phone)
 
-npm run dev
-# → Open http://localhost:5173
-```
+1. Go to [vercel.com](https://vercel.com) → sign in with GitHub
+2. Tap **Add New Project** → select `onstream` → tap **Import**
+3. Find the **Environment Variables** section
+4. Tap **Add** and enter:
+   - **Name:** `VITE_TMDB_KEY`
+   - **Value:** *(your TMDB API key)*
+5. Tap **Deploy** 🚀
 
----
+### 4. Install on your phone as an app
 
-## 📤 Deploy to GitHub + Vercel
+**Android (Chrome):**
+- Open your Vercel URL
+- Tap ⋮ menu → **Add to Home screen**
+- Or tap the banner that auto-appears
 
-### Step 1 – Push to GitHub
-
-```bash
-# In your project folder
-git init
-git add .
-git commit -m "🎬 Initial OnStream PWA"
-
-# Create a new repo on github.com, then:
-git remote add origin https://github.com/YOUR_USERNAME/onstream.git
-git branch -M main
-git push -u origin main
-```
-
-### Step 2 – Deploy to Vercel
-
-1. Go to [https://vercel.com](https://vercel.com) and sign in with GitHub
-2. Click **"Add New Project"**
-3. Import your `onstream` repository
-4. In **"Environment Variables"**, add:
-   - **Name:** `VITE_TMDB_API_KEY`
-   - **Value:** `your_tmdb_api_key_here`
-5. Click **"Deploy"** 🚀
-
-Vercel auto-detects Vite. Your app will be live at `https://onstream-xxx.vercel.app`
-
-### Step 3 – Custom Domain (optional)
-
-In Vercel → Project → Settings → Domains → Add your domain.
+**iPhone (Safari):**
+- Open your Vercel URL in **Safari** (must be Safari, not Chrome)
+- Tap the **Share** button (box with arrow)
+- Scroll down → tap **Add to Home Screen**
+- Tap **Add**
 
 ---
 
-## 📲 Install as App (PWA)
-
-### Android (Chrome)
-1. Open your deployed URL in Chrome
-2. Tap the **⋮ menu** → **"Add to Home screen"**
-3. Or tap the **install banner** that appears automatically
-
-### iOS (Safari)
-1. Open your deployed URL in Safari
-2. Tap the **Share button** (box with arrow)
-3. Scroll down → tap **"Add to Home Screen"**
-4. Tap **"Add"**
-
-### Desktop (Chrome/Edge)
-- Click the **install icon** in the address bar
-- Or: Menu → "Install OnStream"
-
----
-
-## 🗂️ Project Structure
+## 📁 Correct Folder Structure
 
 ```
 onstream/
 ├── public/
-│   ├── icon.svg            # App icon source
-│   ├── icon-192.png        # PWA icon (replace with real PNG)
-│   ├── icon-512.png        # PWA icon (replace with real PNG)
-│   └── apple-touch-icon.png
+│   ├── icons/
+│   │   ├── icon-192.png
+│   │   ├── icon-512.png
+│   │   ├── icon-180.png
+│   │   ├── icon-167.png
+│   │   └── icon-152.png
+│   └── favicon.ico
 ├── src/
-│   ├── App.jsx             # Main app (all UI + logic)
-│   ├── main.jsx            # React entry point
+│   ├── hooks/
+│   │   └── useLocalStorage.js
 │   ├── utils/
-│   │   └── tmdb.js         # TMDB API + embed sources
-│   └── hooks/
-│       └── useLocalStorage.js
-├── index.html              # HTML shell + PWA meta tags
-├── vite.config.js          # Vite + PWA plugin config
-├── vercel.json             # Vercel SPA routing
-├── .env.example            # Environment variable template
-└── package.json
+│   │   └── tmdb.js
+│   ├── App.jsx
+│   └── main.jsx
+├── .env.example
+├── .gitignore
+├── index.html
+├── package.json
+├── README.md
+├── vercel.json
+└── vite.config.js
 ```
 
----
-
-## 🎭 Embed Servers
-
-The app tries these servers in order. If one fails, tap **"Try Next"**:
-
-| # | Server | Movie URL Pattern |
-|---|---|---|
-| 1 | VidSrc | `vidsrc.xyz/embed/movie/{id}` |
-| 2 | VidSrc2 | `vidsrc.to/embed/movie/{id}` |
-| 3 | 2Embed | `2embed.org/embed/{id}` |
-| 4 | 2Embed Alt | `2embed.cc/embed/{id}` |
-| 5 | AutoEmbed | `autoembed.co/movie/tmdb/{id}` |
-| 6 | VidLink | `vidlink.pro/movie/{id}` |
-| 7 | EmbedSu | `embed.su/embed/movie/{id}` |
+> ⚠️ Do NOT upload `node_modules/` or `.env` to GitHub
 
 ---
 
-## 🔧 Adding Real PWA Icons
+## ▶️ How the In-App Player Works
 
-Replace the placeholder SVG with real PNG icons for best results:
+The player uses **iframe embeds** — the video loads inside the app, not in a new tab. If a server doesn't work:
+1. Tap a different server button (VidSrc, AutoEmbed, 2Embed, etc.)
+2. Or tap **"Next"** to cycle automatically
 
-1. Design a 1024×1024 PNG icon
-2. Use [https://www.pwabuilder.com/imageGenerator](https://www.pwabuilder.com/imageGenerator) to generate all sizes
-3. Place the generated files in `/public/`:
-   - `icon-192.png`
-   - `icon-512.png`
-   - `apple-touch-icon.png` (180×180)
+For TV shows, select the **Season** then the **Episode** below the player.
+
+---
+
+## ⬇️ How Downloads Work
+
+1. While playing, tap the **DL** button (top right)
+2. Choose **720p** or **1080p**
+3. Tap the link → your browser's download manager handles it
+4. On mobile, **long-press** the link and select **"Download link"**
 
 ---
 
 ## 📦 Tech Stack
 
-- **React 18** – UI framework
-- **Vite 5** – Build tool
-- **vite-plugin-pwa** – Service worker + manifest generation
-- **Workbox** – Offline caching strategies
-- **TMDB API** – Movie/TV metadata (free tier)
-- **VidSrc / 2Embed / AutoEmbed** – Third-party embed players
+| Tool | Purpose |
+|------|---------|
+| React 18 | UI |
+| Vite 5 | Build |
+| vite-plugin-pwa | Service worker + manifest |
+| Workbox | Offline caching |
+| TMDB API | Movie/TV metadata |
+| VidSrc/AutoEmbed/etc | In-app video embeds |
 
 ---
 
 ## 🔑 Environment Variables
 
-| Variable | Required | Description |
-|---|---|---|
-| `VITE_TMDB_API_KEY` | ✅ Yes | Your TMDB v3 API key |
+| Variable | Where to set | Description |
+|----------|-------------|-------------|
+| `VITE_TMDB_KEY` | Vercel dashboard | Your free TMDB v3 API key |
 
----
-
-## 📄 License
-
-MIT — Free to use and modify for personal/educational purposes.
-
-Movie data provided by [TMDb](https://www.themoviedb.org/). This product uses the TMDb API but is not endorsed or certified by TMDb.
+Never put your API key in a file you upload to GitHub.

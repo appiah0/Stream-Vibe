@@ -1,7 +1,8 @@
 {
   "name": "onstream",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -14,7 +15,6 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
     "vite": "^5.4.6",
-    "vite-plugin-pwa": "^0.21.0",
-    "workbox-window": "^7.3.0"
+    "vite-plugin-pwa": "^0.21.0"
   }
 }

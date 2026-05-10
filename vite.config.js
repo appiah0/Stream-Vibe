@@ -7,43 +7,48 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon-*.png'],
+      includeAssets: ['favicon.ico', 'icons/*.png', 'icons/*.svg'],
       manifest: {
-        name: 'OnStream – Free Streaming',
+        name: 'OnStream – Free Movies & TV',
         short_name: 'OnStream',
-        description: 'Watch free movies & TV shows in HD – no login, no subscription.',
-        theme_color: '#0a0a0f',
-        background_color: '#0a0a0f',
+        description: 'Watch free movies and TV shows in HD. No login required.',
+        theme_color: '#0d0d0d',
+        background_color: '#0d0d0d',
         display: 'standalone',
         orientation: 'any',
         scope: '/',
-        start_url: '/',
+        start_url: '/?source=pwa',
         icons: [
-          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          { src: '/icons/icon-180.png', sizes: '180x180', type: 'image/png' }
         ],
-        screenshots: [
-          { src: '/screenshot-wide.png', sizes: '1280x720', type: 'image/png', form_factor: 'wide' },
-          { src: '/screenshot-narrow.png', sizes: '390x844', type: 'image/png', form_factor: 'narrow' }
-        ],
-        categories: ['entertainment', 'video'],
+        categories: ['entertainment'],
         shortcuts: [
-          { name: 'Movies', short_name: 'Movies', url: '/?tab=movies', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
-          { name: 'TV Shows', short_name: 'Shows', url: '/?tab=shows', icons: [{ src: '/icon-192.png', sizes: '192x192' }] }
+          { name: 'Movies', url: '/?tab=movies', icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }] },
+          { name: 'TV Shows', url: '/?tab=shows', icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }] }
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webp}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/api\.themoviedb\.org\//,
+            urlPattern: /^https:\/\/api\.themoviedb\.org\/.*/i,
             handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'tmdb-api-cache', expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 } }
+            options: {
+              cacheName: 'tmdb-api',
+              expiration: { maxEntries: 300, maxAgeSeconds: 86400 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
           },
           {
-            urlPattern: /^https:\/\/image\.tmdb\.org\//,
+            urlPattern: /^https:\/\/image\.tmdb\.org\/.*/i,
             handler: 'CacheFirst',
-            options: { cacheName: 'tmdb-images-cache', expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 } }
+            options: {
+              cacheName: 'tmdb-images',
+              expiration: { maxEntries: 600, maxAgeSeconds: 2592000 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
           }
         ]
       }
