@@ -1,18 +1,1 @@
-<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'>
-  <rect width='64' height='64' rx='12' fill='#0a0a0f'/>
-  <rect width='64' height='64' rx='12' fill='url(#grad)'/>
-  <defs>
-    <radialGradient id='glow' cx='50%' cy='45%' r='45%'>
-      <stop offset='0%' stop-color='#e50914' stop-opacity='0.2'/>
-      <stop offset='100%' stop-color='#e50914' stop-opacity='0'/>
-    </radialGradient>
-    <linearGradient id='grad' x1='0%' y1='0%' x2='100%' y2='100%'>
-      <stop offset='0%' stop-color='#180808'/>
-      <stop offset='100%' stop-color='#0a0a14'/>
-    </linearGradient>
-  </defs>
-  <rect width='64' height='64' rx='12' fill='url(#glow)'/>
-  <polygon points='23,19 23,45 45,32' fill='#e50914'/>
-  <text x='32' y='54' font-family='Arial Black,Impact,sans-serif' font-size='7' font-weight='900' fill='white' text-anchor='middle' letter-spacing='1'>ON</text>
-  <text x='32' y='61' font-family='Arial Black,Impact,sans-serif' font-size='5' font-weight='900' fill='#e50914' text-anchor='middle' letter-spacing='1'>STREAM</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#1a0505"/><stop offset="100%" stop-color="#0d0d0d"/></linearGradient></defs><rect width="64" height="64" rx="13" fill="url(#bg)"/><polygon points="23,19 23,46 45,32" fill="#e50914"/><text x="32" y="55" font-family="Arial Black" font-size="7" font-weight="900" fill="white" text-anchor="middle">ON</text><text x="32" y="61" font-family="Arial Black" font-size="5" font-weight="900" fill="#e50914" text-anchor="middle">STREAM</text></svg>
