@@ -100,6 +100,10 @@ const Ic = {
   Shield:  ()=><svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
   Clock:   ()=><svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>,
   WifiOff: ()=><svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a11 11 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>,
+  Gear:    ()=><svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+  Palette: ()=><svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>,
+  Text:    ()=><svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="4,7 4,4 20,4 20,7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>,
+  Video:   ()=><svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="23,7 16,12 23,17 23,7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>,
 };
 
 // ─── Micro components ─────────────────────────────────────────────────────────
@@ -207,57 +211,121 @@ function useSubtitleEngine(vttUrl, delay) {
   return currentCue;
 }
 
-// ─── Player ───────────────────────────────────────────────────────────────────
-function Player({ item, onClose, onToggleFav, isFav }) {
-  usePopupBlocker();
-  const isTV      = getType(item) === 'tv';
-  const servers   = SERVERS[isTV ? 'tv' : 'movie'];
-  const dlSrcs    = DOWNLOAD[isTV ? 'tv' : 'movie'];
+// ─── Settings defaults ────────────────────────────────────────────────────────
+export const DEFAULT_SETTINGS = {
+  // Subtitle appearance
+  subFont:      'DM Sans',
+  subSize:      18,           // px
+  subColor:     '#ffffff',
+  subBg:        'rgba(0,0,0,0.82)',
+  subBold:      false,
+  subItalic:    false,
+  subPosition:  'bottom',     // 'bottom' | 'top' | 'middle'
+  subShadow:    true,
+  // Player defaults
+  defServer:    'vidlink',    // server id
+  defQuality:   'auto',       // 'auto'|'1080p'|'720p'|'480p'|'360p'
+  defResize:    'contain',    // 'contain'|'cover'|'fill'|'16:9'|'4:3'|'21:9'
+};
 
-  const [srvIdx,   setSrvIdx]   = useState(0);
+const FONTS    = ['DM Sans','Arial','Georgia','Courier New','Trebuchet MS','Impact','Verdana','Times New Roman'];
+const QUALITIES= ['auto','1080p','720p','480p','360p'];
+const RESIZES  = [
+  {id:'contain', label:'Contain (letterbox)'},
+  {id:'cover',   label:'Cover (crop)'},
+  {id:'fill',    label:'Fill (stretch)'},
+  {id:'16:9',    label:'Force 16:9'},
+  {id:'4:3',     label:'Force 4:3'},
+  {id:'21:9',    label:'Force 21:9 (cinema)'},
+];
+
+// Map resize mode → CSS aspect-ratio + object-fit for iframe container
+function resizeStyle(mode) {
+  const map = {
+    'contain': { aspectRatio:'16/9', objectFit:'contain' },
+    'cover':   { aspectRatio:'16/9', objectFit:'cover' },
+    'fill':    { aspectRatio:'16/9', objectFit:'fill' },
+    '16:9':    { aspectRatio:'16/9' },
+    '4:3':     { aspectRatio:'4/3' },
+    '21:9':    { aspectRatio:'21/9' },
+  };
+  return map[mode] || map['contain'];
+}
+
+// ─── SettingRow helper ────────────────────────────────────────────────────────
+function SLabel({children}) {
+  return <div style={{color:'rgba(255,255,255,.4)',fontSize:10,fontWeight:700,letterSpacing:1.3,textTransform:'uppercase',marginBottom:7,marginTop:14}}>{children}</div>;
+}
+function SRow({children}) {
+  return <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>{children}</div>;
+}
+function SChip({active,onClick,children}) {
+  return (
+    <button className="btn" onClick={onClick}
+      style={{border:'1px solid',borderRadius:7,padding:'5px 12px',fontSize:12,fontWeight:700,
+        background:active?'#e50914':'rgba(255,255,255,.06)',
+        borderColor:active?'#e50914':'rgba(255,255,255,.12)',
+        color:active?'#fff':'rgba(255,255,255,.65)',whiteSpace:'nowrap'}}>
+      {children}
+    </button>
+  );
+}
+
+// ─── Player ───────────────────────────────────────────────────────────────────
+function Player({ item, onClose, onToggleFav, isFav, settings, onSaveSettings }) {
+  usePopupBlocker();
+  const isTV    = getType(item) === 'tv';
+  const servers = SERVERS[isTV ? 'tv' : 'movie'];
+  const dlSrcs  = DOWNLOAD[isTV ? 'tv' : 'movie'];
+
+  // Find initial server index from settings default
+  const initSrvIdx = Math.max(0, servers.findIndex(s => s.id === settings.defServer));
+
+  const [srvIdx,   setSrvIdx]   = useState(initSrvIdx);
   const [season,   setSeason]   = useState(1);
   const [episode,  setEpisode]  = useState(1);
   const [seasons,  setSeasons]  = useState([]);
   const [episodes, setEpisodes] = useState([]);
   const [loadEps,  setLoadEps]  = useState(false);
   const [ifrLoad,  setIfrLoad]  = useState(true);
-  const [panel,    setPanel]    = useState('servers'); // 'servers'|'download'|'subtitles'
+  const [panel,    setPanel]    = useState('servers');
   const [subLang,  setSubLang]  = useState('off');
-  const [subDelay, setSubDelay] = useState(0);        // seconds offset
+  const [subDelay, setSubDelay] = useState(0);
   const [vttUrl,   setVttUrl]   = useState(null);
-  const ifrRef   = useRef(null);
-  const wrapRef  = useRef(null);
+  // Local copy of settings for live editing inside player
+  const [localSets, setLocalSets] = useState({ ...settings });
+  const ifrRef  = useRef(null);
+  const wrapRef = useRef(null);
+
+  const set = (k, v) => setLocalSets(p => ({ ...p, [k]: v }));
+  const saveAndClose = () => { onSaveSettings(localSets); };
 
   const embedUrl = useMemo(() => {
     const srv = servers[srvIdx];
-    // Append subtitle lang param where supported
-    const base = isTV ? srv.url(item.id, season, episode) : srv.url(item.id);
-    const sep  = base.includes('?') ? '&' : '?';
-    return subLang !== 'off' ? `${base}${sep}sub_lang=${subLang}` : base;
-  }, [servers, srvIdx, item.id, isTV, season, episode, subLang]);
+    let base = isTV ? srv.url(item.id, season, episode) : srv.url(item.id);
+    const sep = base.includes('?') ? '&' : '?';
+    // Pass quality hint where supported
+    if (localSets.defQuality !== 'auto') base += `${sep}quality=${localSets.defQuality}`;
+    // Pass subtitle lang hint
+    if (subLang !== 'off') base += `${base.includes('?')?'&':'?'}sub_lang=${subLang}`;
+    return base;
+  }, [servers, srvIdx, item.id, isTV, season, episode, subLang, localSets.defQuality]);
 
-  // Subtitle VTT URL (open-subtitles proxy via vidsrc)
   useEffect(() => {
     if (subLang === 'off') { setVttUrl(null); return; }
-    const base = isTV
+    setVttUrl(isTV
       ? `https://vidsrc.xyz/subs/tv?tmdb=${item.id}&season=${season}&episode=${episode}&lang=${subLang}`
-      : `https://vidsrc.xyz/subs/movie?tmdb=${item.id}&lang=${subLang}`;
-    setVttUrl(base);
+      : `https://vidsrc.xyz/subs/movie?tmdb=${item.id}&lang=${subLang}`);
   }, [subLang, item.id, isTV, season, episode]);
 
   const subtitleText = useSubtitleEngine(vttUrl, subDelay);
 
-  // Prevent iframe from navigating parent
   useEffect(() => {
-    // CSP-like: override any attempt by iframe to navigate
-    const guard = (e) => {
-      if (e.target !== window) { e.stopImmediatePropagation(); }
-    };
+    const guard = (e) => { if (e.target !== window) e.stopImmediatePropagation(); };
     window.addEventListener('click', guard, true);
     return () => window.removeEventListener('click', guard, true);
   }, []);
 
-  // TV: load season count
   useEffect(() => {
     if (!isTV) return;
     getShowDetail(item.id).then(d => {
@@ -266,37 +334,65 @@ function Player({ item, onClose, onToggleFav, isFav }) {
     });
   }, [item.id, isTV]);
 
-  // TV: load episodes
   useEffect(() => {
     if (!isTV || !seasons.length) return;
     setLoadEps(true);
     getSeasonDetail(item.id, season).then(d => {
       const eps = d?.episodes?.map(e => ({num:e.episode_number, name:e.name}))
         || Array.from({length:10},(_,i) => ({num:i+1, name:`Episode ${i+1}`}));
-      setEpisodes(eps);
-      setEpisode(1);
-      setLoadEps(false);
+      setEpisodes(eps); setEpisode(1); setLoadEps(false);
     });
   }, [item.id, season, isTV, seasons]);
 
   const goFS = () => {
     const el = wrapRef.current;
     if (!el) return;
-    const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
-    if (fn) fn.call(el);
+    (el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen)?.call(el);
   };
-
   const switchServer = (i) => { setSrvIdx(i); setIfrLoad(true); };
   const nextServer   = () => switchServer((srvIdx + 1) % servers.length);
 
-  const s  = (style) => style; // passthrough
+  // Subtitle overlay position
+  const subPositionStyle = {
+    bottom: { bottom:56, top:'auto' },
+    top:    { top:14,    bottom:'auto' },
+    middle: { top:'50%', bottom:'auto', transform:'translateY(-50%)' },
+  }[localSets.subPosition] || { bottom:56 };
+
+  // Build subtitle text style from settings
+  const subTextStyle = {
+    fontFamily:  `'${localSets.subFont}', sans-serif`,
+    fontSize:    `${localSets.subSize}px`,
+    color:       localSets.subColor,
+    background:  localSets.subBg,
+    fontWeight:  localSets.subBold   ? 900 : 600,
+    fontStyle:   localSets.subItalic ? 'italic' : 'normal',
+    textShadow:  localSets.subShadow ? '0 1px 4px rgba(0,0,0,1)' : 'none',
+    lineHeight:  1.45,
+    padding:     '5px 14px',
+    borderRadius: 6,
+    textAlign:   'center',
+    maxWidth:    '92%',
+  };
+
+  const containerStyle = {
+    flexShrink: 0, position: 'relative', width: '100%', background: '#000',
+    ...resizeStyle(localSets.defResize),
+  };
+
+  const PANEL_TABS = [
+    {id:'servers',   label:'Servers',   icon:<Ic.Refresh/>},
+    {id:'subtitles', label:'Subtitles', icon:<Ic.Sub/>},
+    {id:'download',  label:'Download',  icon:<Ic.DL/>},
+    {id:'settings',  label:'Settings',  icon:<Ic.Gear/>},
+  ];
 
   return (
     <div style={{position:'fixed',inset:0,zIndex:3000,background:'#000',display:'flex',flexDirection:'column',overflowY:'auto',overflowX:'hidden'}}>
 
       {/* ── Top bar ── */}
       <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',background:'rgba(10,10,15,.97)',backdropFilter:'blur(14px)',borderBottom:'1px solid rgba(255,255,255,.07)',flexShrink:0,position:'sticky',top:0,zIndex:10}}>
-        <button className="btn" onClick={onClose} style={{background:'rgba(255,255,255,.08)',border:'none',color:'#fff',borderRadius:8,padding:'8px 10px',display:'flex'}}>
+        <button className="btn" onClick={()=>{saveAndClose();onClose();}} style={{background:'rgba(255,255,255,.08)',border:'none',color:'#fff',borderRadius:8,padding:'8px 10px',display:'flex'}}>
           <Ic.Back />
         </button>
         <div style={{flex:1,minWidth:0}}>
@@ -311,19 +407,8 @@ function Player({ item, onClose, onToggleFav, isFav }) {
         </button>
       </div>
 
-      {/* ── Video iframe — SANDBOXED to block popups/redirects ── */}
-      <div ref={wrapRef} className="player-wrap" style={{flexShrink:0,position:'relative',width:'100%',aspectRatio:'16/9',background:'#000'}}>
-        {/*
-          sandbox flags explained:
-          allow-scripts        → needed for the player JS to run
-          allow-same-origin    → needed for the player to load its own resources
-          allow-forms          → needed for some players
-          allow-presentation   → needed for fullscreen
-          MISSING (intentionally blocked):
-          allow-popups         → blocks window.open() ads
-          allow-top-navigation → blocks redirecting the parent page
-          allow-popups-to-escape-sandbox → blocks escaping sandbox
-        */}
+      {/* ── Video iframe — SANDBOXED ── */}
+      <div ref={wrapRef} className="player-wrap" style={containerStyle}>
         {ifrLoad && (
           <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'#000',zIndex:5}}>
             <Spinner />
@@ -343,33 +428,35 @@ function Player({ item, onClose, onToggleFav, isFav }) {
           referrerPolicy="no-referrer"
           scrolling="no"
         />
-        {/* Subtitle overlay — renders ON TOP of iframe */}
+        {/* Subtitle overlay */}
         {subtitleText && (
-          <div className="sub-overlay">
-            <div className="sub-text">{subtitleText}</div>
+          <div style={{position:'absolute',left:0,right:0,display:'flex',justifyContent:'center',pointerEvents:'none',zIndex:20,padding:'0 12px',...subPositionStyle}}>
+            <div style={subTextStyle}>{subtitleText}</div>
           </div>
         )}
-        {/* Fullscreen button */}
+        {/* Fullscreen btn */}
         <button className="btn" onClick={goFS} style={{position:'absolute',bottom:8,right:8,background:'rgba(0,0,0,.55)',border:'none',color:'#fff',borderRadius:6,padding:6,display:'flex',zIndex:15}}>
           <Ic.FS />
         </button>
-        {/* Active sub indicator */}
+        {/* CC indicator */}
         {subLang !== 'off' && (
           <div style={{position:'absolute',top:8,left:8,background:'rgba(229,9,20,.85)',color:'#fff',fontSize:10,fontWeight:800,padding:'3px 8px',borderRadius:20,zIndex:15,display:'flex',alignItems:'center',gap:4}}>
             <Ic.Sub /> CC {subLang.toUpperCase()}
+          </div>
+        )}
+        {/* Quality badge */}
+        {localSets.defQuality !== 'auto' && (
+          <div style={{position:'absolute',top:8,right:8,background:'rgba(0,0,0,.7)',color:'#fff',fontSize:10,fontWeight:800,padding:'3px 8px',borderRadius:20,zIndex:15}}>
+            {localSets.defQuality}
           </div>
         )}
       </div>
 
       {/* ── Panel tabs ── */}
       <div style={{display:'flex',borderBottom:'1px solid rgba(255,255,255,.07)',flexShrink:0,background:'rgba(10,10,15,.98)'}}>
-        {[
-          {id:'servers',  label:'Servers',   icon:<Ic.Refresh/>},
-          {id:'subtitles',label:'Subtitles', icon:<Ic.Sub/>},
-          {id:'download', label:'Download',  icon:<Ic.DL/>},
-        ].map(p => (
+        {PANEL_TABS.map(p => (
           <button key={p.id} className="btn" onClick={()=>setPanel(p.id)}
-            style={{flex:1,background:'none',border:'none',color:panel===p.id?'#e50914':'rgba(255,255,255,.45)',padding:'10px 4px',display:'flex',flexDirection:'column',alignItems:'center',gap:3,borderBottom:panel===p.id?'2px solid #e50914':'2px solid transparent',fontWeight:panel===p.id?800:500,fontSize:11}}>
+            style={{flex:1,background:'none',border:'none',color:panel===p.id?'#e50914':'rgba(255,255,255,.45)',padding:'10px 2px',display:'flex',flexDirection:'column',alignItems:'center',gap:3,borderBottom:panel===p.id?'2px solid #e50914':'2px solid transparent',fontWeight:panel===p.id?800:500,fontSize:10}}>
             {p.icon}{p.label}
           </button>
         ))}
@@ -379,7 +466,7 @@ function Player({ item, onClose, onToggleFav, isFav }) {
       {panel === 'servers' && (
         <div style={{padding:'12px 14px',flexShrink:0}}>
           <p style={{color:'rgba(255,255,255,.35)',fontSize:11,marginBottom:10,display:'flex',alignItems:'center',gap:5}}>
-            <Ic.Shield /> All servers sandbox-blocked — no popups, no redirects
+            <Ic.Shield /> Sandbox-blocked — no popups, no redirects, no tabs
           </p>
           <div className="scroll-x" style={{display:'flex',gap:7,paddingBottom:4}}>
             {servers.map((s,i) => (
@@ -394,22 +481,18 @@ function Player({ item, onClose, onToggleFav, isFav }) {
             style={{marginTop:10,display:'flex',alignItems:'center',gap:6,background:'rgba(229,9,20,.12)',border:'1px solid rgba(229,9,20,.3)',color:'#e50914',borderRadius:8,padding:'8px 14px',fontSize:12,fontWeight:700}}>
             <Ic.Next /> Try Next Server
           </button>
-
-          {/* TV season/episode */}
           {isTV && (
             <div style={{marginTop:14}}>
-              {seasons.length > 0 && (
-                <>
-                  <div style={{color:'rgba(255,255,255,.4)',fontSize:10,fontWeight:700,letterSpacing:1.4,textTransform:'uppercase',marginBottom:7}}>Season</div>
-                  <div className="scroll-x" style={{display:'flex',gap:6,marginBottom:12,paddingBottom:4}}>
-                    {seasons.map(s => (
-                      <button key={s} className={`btn ${season===s?'ep-active':'ep-inactive'}`}
-                        onClick={()=>{setSeason(s);setIfrLoad(true);}}
-                        style={{border:'1px solid',borderRadius:7,padding:'6px 11px',fontSize:12,fontWeight:700}}>S{s}</button>
-                    ))}
-                  </div>
-                </>
-              )}
+              {seasons.length > 0 && (<>
+                <div style={{color:'rgba(255,255,255,.4)',fontSize:10,fontWeight:700,letterSpacing:1.4,textTransform:'uppercase',marginBottom:7}}>Season</div>
+                <div className="scroll-x" style={{display:'flex',gap:6,marginBottom:12,paddingBottom:4}}>
+                  {seasons.map(s => (
+                    <button key={s} className={`btn ${season===s?'ep-active':'ep-inactive'}`}
+                      onClick={()=>{setSeason(s);setIfrLoad(true);}}
+                      style={{border:'1px solid',borderRadius:7,padding:'6px 11px',fontSize:12,fontWeight:700}}>S{s}</button>
+                  ))}
+                </div>
+              </>)}
               <div style={{color:'rgba(255,255,255,.4)',fontSize:10,fontWeight:700,letterSpacing:1.4,textTransform:'uppercase',marginBottom:7}}>Episode</div>
               {loadEps
                 ? <p style={{color:'rgba(255,255,255,.3)',fontSize:12,animation:'pulse 1s infinite'}}>Loading…</p>
@@ -431,43 +514,42 @@ function Player({ item, onClose, onToggleFav, isFav }) {
       {/* ── Subtitles panel ── */}
       {panel === 'subtitles' && (
         <div style={{padding:'12px 14px',flexShrink:0}}>
-          <p style={{color:'rgba(255,255,255,.5)',fontSize:12,marginBottom:12,lineHeight:1.5}}>
-            Choose a subtitle language. They'll appear as an overlay on the video. If sync is off, adjust the delay below.
-          </p>
-
-          {/* Language picker */}
-          <div style={{color:'rgba(255,255,255,.4)',fontSize:10,fontWeight:700,letterSpacing:1.4,textTransform:'uppercase',marginBottom:8}}>Language</div>
-          <div className="scroll-x" style={{display:'flex',gap:7,paddingBottom:8,marginBottom:14}}>
+          <SLabel>Language</SLabel>
+          <div className="scroll-x" style={{display:'flex',gap:7,paddingBottom:8}}>
             {SUBTITLE_LANGS.map(l => (
               <button key={l.code} className={`sub-pill btn ${subLang===l.code?'sub-active':'sub-inactive'}`}
-                onClick={()=>setSubLang(l.code)}>
-                {l.label}
-              </button>
+                onClick={()=>setSubLang(l.code)}>{l.label}</button>
             ))}
           </div>
 
-          {/* Delay control */}
-          <div style={{color:'rgba(255,255,255,.4)',fontSize:10,fontWeight:700,letterSpacing:1.4,textTransform:'uppercase',marginBottom:8,display:'flex',alignItems:'center',gap:6}}>
-            <Ic.Clock /> Subtitle Delay
-          </div>
+          <SLabel><Ic.Clock /> Subtitle Delay</SLabel>
           <div style={{display:'flex',alignItems:'center',gap:12,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',borderRadius:10,padding:'10px 14px'}}>
             <button className="btn" onClick={()=>setSubDelay(d=>+(d-0.5).toFixed(1))}
               style={{background:'rgba(255,255,255,.08)',border:'none',color:'#fff',borderRadius:7,padding:'6px 12px',fontSize:16,fontWeight:800}}>−</button>
             <div style={{flex:1,textAlign:'center'}}>
-              <span style={{fontSize:20,fontWeight:900,color:subDelay===0?'#fff':subDelay>0?'#4ade80':'#f87171'}}>{subDelay > 0 ? '+' : ''}{subDelay.toFixed(1)}s</span>
-              <div style={{color:'rgba(255,255,255,.35)',fontSize:11,marginTop:2}}>{subDelay===0?'No delay':subDelay>0?'Subtitles delayed':'Subtitles early'}</div>
+              <span style={{fontSize:20,fontWeight:900,color:subDelay===0?'#fff':subDelay>0?'#4ade80':'#f87171'}}>{subDelay>0?'+':''}{subDelay.toFixed(1)}s</span>
+              <div style={{color:'rgba(255,255,255,.35)',fontSize:11,marginTop:2}}>{subDelay===0?'No delay':subDelay>0?'Delayed (subs come later)':'Early (subs come sooner)'}</div>
             </div>
             <button className="btn" onClick={()=>setSubDelay(d=>+(d+0.5).toFixed(1))}
               style={{background:'rgba(255,255,255,.08)',border:'none',color:'#fff',borderRadius:7,padding:'6px 12px',fontSize:16,fontWeight:800}}>+</button>
           </div>
           <button className="btn" onClick={()=>setSubDelay(0)}
-            style={{marginTop:8,background:'none',border:'none',color:'rgba(255,255,255,.4)',fontSize:12,padding:'4px 0',display:'flex',alignItems:'center',gap:5}}>
-            <Ic.Refresh /> Reset delay to 0
+            style={{marginTop:7,background:'none',border:'none',color:'rgba(255,255,255,.4)',fontSize:12,padding:'4px 0',display:'flex',alignItems:'center',gap:5}}>
+            <Ic.Refresh /> Reset to 0
           </button>
 
-          <div style={{marginTop:14,padding:'10px 12px',background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)',borderRadius:9}}>
+          {/* Live preview */}
+          {subLang !== 'off' && (
+            <div style={{marginTop:14,padding:'12px',background:'rgba(0,0,0,.6)',borderRadius:10,border:'1px solid rgba(255,255,255,.07)'}}>
+              <div style={{color:'rgba(255,255,255,.4)',fontSize:10,fontWeight:700,letterSpacing:1.3,textTransform:'uppercase',marginBottom:8}}>Preview</div>
+              <div style={{display:'flex',justifyContent:'center'}}>
+                <div style={subTextStyle}>The quick brown fox jumps over the lazy dog.</div>
+              </div>
+            </div>
+          )}
+          <div style={{marginTop:12,padding:'10px 12px',background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)',borderRadius:9}}>
             <p style={{color:'rgba(255,255,255,.35)',fontSize:11,lineHeight:1.6}}>
-              💡 The subtitle engine also passes the language to embed servers that support it natively. If subs appear twice, switch to a different server.
+              💡 Appearance settings (font, size, color, position) are in the <b style={{color:'rgba(255,255,255,.5)'}}>Settings</b> tab. They're saved for all future videos.
             </p>
           </div>
         </div>
@@ -477,13 +559,10 @@ function Player({ item, onClose, onToggleFav, isFav }) {
       {panel === 'download' && (
         <div style={{padding:'12px 14px',flexShrink:0}}>
           <p style={{color:'rgba(255,255,255,.5)',fontSize:12,marginBottom:12,lineHeight:1.5}}>
-            Tap a quality to download. On mobile, <b style={{color:'#fff'}}>long-press → "Download link"</b> to save to your device.
+            On mobile: <b style={{color:'#fff'}}>long-press a link → "Download"</b> to save to your device.
           </p>
           <div style={{display:'flex',flexDirection:'column',gap:8}}>
-            {(isTV
-              ? dlSrcs.map(s=>({...s,href:s.url(item.id,season,episode)}))
-              : dlSrcs.map(s=>({...s,href:s.url(item.id)}))
-            ).map((src,i)=>(
+            {(isTV ? dlSrcs.map(s=>({...s,href:s.url(item.id,season,episode)})) : dlSrcs.map(s=>({...s,href:s.url(item.id)}))).map((src,i)=>(
               <a key={i} href={src.href} className="dl-row" target="_blank" rel="noopener noreferrer" download>
                 {src.isSub ? <Ic.Sub /> : <Ic.DL />}
                 <span style={{flex:1,fontWeight:600,fontSize:13}}>{src.name}</span>
@@ -493,11 +572,158 @@ function Player({ item, onClose, onToggleFav, isFav }) {
           </div>
           <div style={{marginTop:14,padding:'10px 12px',background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)',borderRadius:9}}>
             <p style={{color:'rgba(255,255,255,.35)',fontSize:11,lineHeight:1.65}}>
-              📱 <b style={{color:'rgba(255,255,255,.5)'}}>Android:</b> Tap → download manager opens.<br/>
+              📱 <b style={{color:'rgba(255,255,255,.5)'}}>Android:</b> Download manager opens automatically.<br/>
               🍎 <b style={{color:'rgba(255,255,255,.5)'}}>iPhone:</b> Long-press → "Download Linked File".<br/>
-              💾 <b style={{color:'rgba(255,255,255,.5)'}}>Offline:</b> Once downloaded, watch anytime with VLC or your file manager's video player.
+              💾 <b style={{color:'rgba(255,255,255,.5)'}}>Once saved:</b> Watch offline in VLC or Files app.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* ── Settings panel ── */}
+      {panel === 'settings' && (
+        <div style={{padding:'12px 14px 28px',flexShrink:0}}>
+
+          {/* ── SUBTITLE APPEARANCE ── */}
+          <div style={{padding:'12px 14px',background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.07)',borderRadius:12,marginBottom:16}}>
+            <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:4,color:'rgba(255,255,255,.8)',fontWeight:700,fontSize:13}}>
+              <Ic.Sub /> Subtitle Appearance
+            </div>
+            <div style={{color:'rgba(255,255,255,.35)',fontSize:11,marginBottom:12}}>Changes apply live to the subtitle overlay</div>
+
+            {/* Font family */}
+            <SLabel><Ic.Text /> Font</SLabel>
+            <div className="scroll-x" style={{display:'flex',gap:7,paddingBottom:4}}>
+              {FONTS.map(f => (
+                <SChip key={f} active={localSets.subFont===f} onClick={()=>set('subFont',f)}>
+                  <span style={{fontFamily:f}}>{f}</span>
+                </SChip>
+              ))}
+            </div>
+
+            {/* Font size */}
+            <SLabel>Text Size</SLabel>
+            <div style={{display:'flex',alignItems:'center',gap:12}}>
+              <button className="btn" onClick={()=>set('subSize',Math.max(10,localSets.subSize-2))}
+                style={{background:'rgba(255,255,255,.08)',border:'none',color:'#fff',borderRadius:7,padding:'6px 12px',fontSize:15,fontWeight:800}}>A−</button>
+              <div style={{flex:1,textAlign:'center',fontSize:22,fontWeight:900}}>{localSets.subSize}px</div>
+              <button className="btn" onClick={()=>set('subSize',Math.min(48,localSets.subSize+2))}
+                style={{background:'rgba(255,255,255,.08)',border:'none',color:'#fff',borderRadius:7,padding:'6px 12px',fontSize:15,fontWeight:800}}>A+</button>
+            </div>
+
+            {/* Text color */}
+            <SLabel><Ic.Palette /> Text Color</SLabel>
+            <SRow>
+              {['#ffffff','#ffff00','#00ff00','#00bfff','#ff6b6b','#ffa500','#ff69b4','#e0e0e0'].map(c=>(
+                <button key={c} className="btn" onClick={()=>set('subColor',c)}
+                  style={{width:30,height:30,borderRadius:'50%',background:c,border:localSets.subColor===c?'3px solid #e50914':'3px solid transparent',padding:0,flexShrink:0}}/>
+              ))}
+              <input type="color" value={localSets.subColor} onChange={e=>set('subColor',e.target.value)}
+                style={{width:30,height:30,borderRadius:'50%',border:'2px solid rgba(255,255,255,.2)',padding:0,cursor:'pointer',background:'none'}} title="Custom color"/>
+            </SRow>
+
+            {/* Background color */}
+            <SLabel>Background</SLabel>
+            <SRow>
+              {[
+                {label:'Black',  val:'rgba(0,0,0,0.82)'},
+                {label:'Dark',   val:'rgba(20,20,20,0.9)'},
+                {label:'Red',    val:'rgba(180,0,0,0.75)'},
+                {label:'Blue',   val:'rgba(0,0,180,0.75)'},
+                {label:'None',   val:'transparent'},
+              ].map(b=>(
+                <SChip key={b.label} active={localSets.subBg===b.val} onClick={()=>set('subBg',b.val)}>{b.label}</SChip>
+              ))}
+            </SRow>
+
+            {/* Style toggles */}
+            <SLabel>Style</SLabel>
+            <SRow>
+              <SChip active={localSets.subBold}   onClick={()=>set('subBold',  !localSets.subBold)}>  <b>Bold</b></SChip>
+              <SChip active={localSets.subItalic} onClick={()=>set('subItalic',!localSets.subItalic)}><i>Italic</i></SChip>
+              <SChip active={localSets.subShadow} onClick={()=>set('subShadow',!localSets.subShadow)}>Shadow</SChip>
+            </SRow>
+
+            {/* Position */}
+            <SLabel>Position</SLabel>
+            <SRow>
+              {['bottom','middle','top'].map(p=>(
+                <SChip key={p} active={localSets.subPosition===p} onClick={()=>set('subPosition',p)}>
+                  {p.charAt(0).toUpperCase()+p.slice(1)}
+                </SChip>
+              ))}
+            </SRow>
+
+            {/* Live preview */}
+            <div style={{marginTop:14,padding:'14px',background:'rgba(0,0,0,.7)',borderRadius:10,border:'1px solid rgba(255,255,255,.07)',display:'flex',justifyContent:'center'}}>
+              <div style={subTextStyle}>Subtitle preview text — 見本テキスト</div>
+            </div>
+          </div>
+
+          {/* ── PLAYER DEFAULTS ── */}
+          <div style={{padding:'12px 14px',background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.07)',borderRadius:12,marginBottom:16}}>
+            <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:4,color:'rgba(255,255,255,.8)',fontWeight:700,fontSize:13}}>
+              <Ic.Video /> Player Defaults
+            </div>
+            <div style={{color:'rgba(255,255,255,.35)',fontSize:11,marginBottom:12}}>These apply when you open a new video</div>
+
+            {/* Default server */}
+            <SLabel>Default Server</SLabel>
+            <div className="scroll-x" style={{display:'flex',gap:7,paddingBottom:4}}>
+              {SERVERS.movie.map(s=>(
+                <SChip key={s.id} active={localSets.defServer===s.id} onClick={()=>set('defServer',s.id)}>{s.name}</SChip>
+              ))}
+            </div>
+
+            {/* Default quality */}
+            <SLabel>Default Quality</SLabel>
+            <SRow>
+              {QUALITIES.map(q=>(
+                <SChip key={q} active={localSets.defQuality===q} onClick={()=>set('defQuality',q)}>
+                  {q==='auto'?'Auto':q}
+                </SChip>
+              ))}
+            </SRow>
+            <p style={{color:'rgba(255,255,255,.3)',fontSize:11,marginTop:6,lineHeight:1.5}}>
+              Quality is passed as a hint to servers that support it. Not all servers honour this setting.
+            </p>
+
+            {/* Default resize mode */}
+            <SLabel>Default Resize / Aspect Ratio</SLabel>
+            <div style={{display:'flex',flexDirection:'column',gap:7}}>
+              {RESIZES.map(r=>(
+                <button key={r.id} className="btn" onClick={()=>set('defResize',r.id)}
+                  style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:9,
+                    background:localSets.defResize===r.id?'rgba(229,9,20,.15)':'rgba(255,255,255,.04)',
+                    border:`1px solid ${localSets.defResize===r.id?'rgba(229,9,20,.5)':'rgba(255,255,255,.08)'}`,
+                    color:'#fff',textAlign:'left'}}>
+                  <div style={{width:18,height:18,borderRadius:'50%',border:`2px solid ${localSets.defResize===r.id?'#e50914':'rgba(255,255,255,.3)'}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                    {localSets.defResize===r.id && <div style={{width:8,height:8,borderRadius:'50%',background:'#e50914'}}/>}
+                  </div>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:13}}>{r.id==='contain'?'Contain':''}
+                      {r.id==='cover'?'Cover':''}
+                      {r.id==='fill'?'Fill':''}
+                      {r.id==='16:9'?'16:9':''}
+                      {r.id==='4:3'?'4:3':''}
+                      {r.id==='21:9'?'21:9 Cinema':''}
+                    </div>
+                    <div style={{color:'rgba(255,255,255,.4)',fontSize:11}}>{r.label}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Save button */}
+          <button className="btn" onClick={()=>{onSaveSettings(localSets); setPanel('servers');}}
+            style={{width:'100%',background:'#e50914',border:'none',color:'#fff',borderRadius:10,padding:'13px',fontSize:14,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+            ✓ Save Settings
+          </button>
+          <button className="btn" onClick={()=>{ setLocalSets({...DEFAULT_SETTINGS}); onSaveSettings({...DEFAULT_SETTINGS}); }}
+            style={{width:'100%',marginTop:8,background:'none',border:'1px solid rgba(255,255,255,.1)',color:'rgba(255,255,255,.4)',borderRadius:10,padding:'11px',fontSize:13,fontWeight:700}}>
+            Reset to Defaults
+          </button>
         </div>
       )}
 
@@ -791,6 +1017,7 @@ export default function App() {
   const [showInst,  setShowInst]= useState(false);
 
   const hasKey = Boolean(import.meta.env.VITE_TMDB_KEY);
+  const [playerSettings, setPlayerSettings] = useLocalStorage('onstream_settings_v1', DEFAULT_SETTINGS);
 
   // Online/offline
   useEffect(()=>{
@@ -837,7 +1064,7 @@ export default function App() {
   return (
     <div style={{background:'#0a0a0f',minHeight:'100dvh',color:'#fff',fontFamily:"'DM Sans',sans-serif",display:'flex',flexDirection:'column'}}>
 
-      {playing && <Player item={playing} onClose={()=>setPlaying(null)} onToggleFav={toggleFav} isFav={favorites.some(f=>f.id===playing.id)}/>}
+      {playing && <Player item={playing} onClose={()=>setPlaying(null)} onToggleFav={toggleFav} isFav={favorites.some(f=>f.id===playing.id)} settings={playerSettings} onSaveSettings={setPlayerSettings}/>}
 
       <Toast msg={toast} clear={()=>setToast('')}/>
 
