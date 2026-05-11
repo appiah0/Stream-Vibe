@@ -57,15 +57,13 @@ export const getRating = (i) => i?.vote_average?.toFixed(1) || '–';
 export const getType   = (i) => i?.media_type || (i?.first_air_date !== undefined ? 'tv' : 'movie');
 
 // ─── Embed Servers ────────────────────────────────────────────────────────────
-// VidLink REMOVED — it redirects aggressively.
-// All remaining servers are sandboxed via iframe sandbox attribute.
-// The sandbox="allow-scripts allow-same-origin allow-forms" prevents:
-//   - window.open() popups
-//   - top-level navigation (redirects)
-//   - new tab opening
-// This is enforced in the Player component.
+// ALL servers (including VidLink) are sandboxed via the iframe sandbox attribute.
+// sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+// This BLOCKS: window.open() ads, top-level redirects, new-tab navigation.
+// The sandbox is what prevents redirects — not removing the server.
 export const SERVERS = {
   movie: [
+    { id:'vidlink',    name:'VidLink',     url:(id)      => `https://vidlink.pro/movie/${id}?autoplay=true&title=true` },
     { id:'vidsrc',     name:'VidSrc',      url:(id)      => `https://vidsrc.xyz/embed/movie?tmdb=${id}` },
     { id:'vidsrc2',    name:'VidSrc 2',    url:(id)      => `https://vidsrc.to/embed/movie/${id}` },
     { id:'autoembed',  name:'AutoEmbed',   url:(id)      => `https://autoembed.co/movie/tmdb/${id}` },
@@ -75,6 +73,7 @@ export const SERVERS = {
     { id:'smashystream',name:'SmashyStream',url:(id)     => `https://embed.smashystream.com/playere.php?tmdb=${id}` },
   ],
   tv: [
+    { id:'vidlink',    name:'VidLink',     url:(id,s,e)  => `https://vidlink.pro/tv/${id}/${s}/${e}?autoplay=true&title=true` },
     { id:'vidsrc',     name:'VidSrc',      url:(id,s,e)  => `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${s}&episode=${e}` },
     { id:'vidsrc2',    name:'VidSrc 2',    url:(id,s,e)  => `https://vidsrc.to/embed/tv/${id}/${s}/${e}` },
     { id:'autoembed',  name:'AutoEmbed',   url:(id,s,e)  => `https://autoembed.co/tv/tmdb/${id}-${s}-${e}` },
