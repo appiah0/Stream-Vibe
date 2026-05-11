@@ -4,66 +4,51 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-  <!-- ── PWA / Install ───────────────────────────────────── -->
-  <meta name="theme-color" content="#0a0a0f" />
+  <!-- PWA / Theme -->
+  <meta name="theme-color" content="#0d0d0d" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="OnStream" />
-  <meta name="application-name" content="OnStream" />
-  <meta name="msapplication-TileColor" content="#0a0a0f" />
-  <meta name="msapplication-TileImage" content="/icons/icon-144.png" />
 
-  <!-- ── Icons (critical for "Add to Home Screen") ───────── -->
-  <!-- Standard favicon -->
-  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
-  <link rel="icon" type="image/png" sizes="32x32"   href="/icons/icon-96.png" />
-  <link rel="shortcut icon" href="/favicon.png" />
+  <!-- SEO -->
+  <meta name="description" content="Watch free movies and TV shows in HD. No login, no subscription." />
+  <meta property="og:title" content="OnStream – Free Movies & TV" />
+  <meta property="og:description" content="Stream thousands of movies and shows free." />
+  <meta property="og:type" content="website" />
 
-  <!-- Apple touch icons — Safari uses these for home screen -->
-  <link rel="apple-touch-icon"                    href="/icons/apple-touch-icon.png" />
-  <link rel="apple-touch-icon" sizes="152x152"    href="/icons/icon-152.png" />
-  <link rel="apple-touch-icon" sizes="167x167"    href="/icons/icon-167.png" />
-  <link rel="apple-touch-icon" sizes="180x180"    href="/icons/icon-180.png" />
-
-  <!-- PWA Manifest -->
+  <!-- Icons -->
+  <link rel="icon" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="/icons/icon-180.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
+  <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
   <link rel="manifest" href="/manifest.webmanifest" />
 
-  <!-- ── Apple Splash Screens (optional but recommended) ─── -->
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-  <!-- ── SEO ────────────────────────────────────────────── -->
-  <meta name="description" content="Watch free movies and TV shows in HD — no login, no ads, no redirects." />
-  <meta property="og:title"       content="OnStream – Free Movies & TV" />
-  <meta property="og:description" content="Stream thousands of movies & shows free. Install as app." />
-  <meta property="og:type"        content="website" />
-  <meta property="og:image"       content="/icons/icon-512.png" />
-
-  <!-- ── Fonts ──────────────────────────────────────────── -->
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-  <title>OnStream – Free Movies & TV</title>
+  <title>OnStream</title>
 
   <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;height:100%}
-    body{
-      background:#0a0a0f;color:#fff;
-      font-family:'DM Sans',sans-serif;
-      overflow-x:hidden;
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
-      min-height:100dvh;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body {
+      background: #0d0d0d;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
     }
-    #root{min-height:100dvh;display:flex;flex-direction:column}
-    ::-webkit-scrollbar{width:3px;height:3px}
-    ::-webkit-scrollbar-track{background:transparent}
-    ::-webkit-scrollbar-thumb{background:#e50914;border-radius:4px}
-    *{scrollbar-width:thin;scrollbar-color:#e50914 transparent}
-    @supports(padding:env(safe-area-inset-bottom)){
-      body{padding-bottom:env(safe-area-inset-bottom)}
+    #root { min-height: 100dvh; }
+    ::-webkit-scrollbar { width: 3px; height: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #e50914; border-radius: 4px; }
+    * { scrollbar-width: thin; scrollbar-color: #e50914 transparent; }
+    @supports (padding: env(safe-area-inset-bottom)) {
+      body { padding-bottom: env(safe-area-inset-bottom); }
     }
   </style>
 </head>
