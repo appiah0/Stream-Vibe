@@ -127,28 +127,90 @@ function Toast({msg, clear}) {
   );
 }
 
-// ─── Popup / Redirect Blocker ─────────────────────────────────────────────────
-// Intercepts window.open and link navigation from iframe context
+// ─── Ad & Redirect Blocker (JS-only, no sandbox) ─────────────────────────────
+// Blocks popup ads and redirects purely through JavaScript interception.
+// No sandbox attribute is used — that was breaking the players on mobile.
 function usePopupBlocker() {
   useEffect(() => {
-    // Block window.open globally
+    // 1. Kill window.open() — the #1 way ad networks open new tabs
     const origOpen = window.open;
-    window.open = function(...args) {
-      console.warn('[OnStream] Blocked popup:', args[0]);
+    window.open = (...args) => {
+      console.warn('[OnStream] Blocked window.open:', args[0]);
       return null;
     };
-    // Block beforeunload navigations caused by iframes
-    const onBeforeUnload = (e) => { e.preventDefault(); e.returnValue = ''; return ''; };
-    // Listen for iframe messages that might be redirects
-    const onMsg = (e) => {
-      if (typeof e.data === 'string' && (e.data.includes('redirect') || e.data.includes('navigate'))) {
-        e.stopImmediatePropagation();
+
+    // 2. Block any attempt to navigate the top-level page away
+    //    (iframes sometimes do window.top.location = 'ad-url')
+    const origTopDesc = Object.getOwnPropertyDescriptor(window, 'top');
+    try {
+      const fakeTop = new Proxy(window, {
+        set(t, prop, val) {
+          if (prop === 'location') {
+            console.warn('[OnStream] Blocked top.location redirect:', val);
+            return true; // swallow it
+          }
+          return Reflect.set(t, prop, val);
+        }
+      });
+      // Only override if we can
+      Object.defineProperty(window, 'top', { get: () => fakeTop, configurable: true });
+    } catch(_) {}
+
+    // 3. Intercept location changes on the parent window itself
+    const origAssign   = window.location.assign.bind(window.location);
+    const origReplace  = window.location.replace.bind(window.location);
+    try {
+      window.location.assign  = (url) => { console.warn('[OnStream] Blocked location.assign:', url); };
+      window.location.replace = (url) => { console.warn('[OnStream] Blocked location.replace:', url); };
+    } catch(_) {}
+
+    // 4. Block link clicks that came from inside iframes (target=_blank etc.)
+    const onLinkClick = (e) => {
+      const a = e.target.closest('a');
+      if (!a) return;
+      // If the click target is inside an iframe — block it
+      if (a.target === '_blank' || a.target === '_top' || a.target === '_parent') {
+        // Only block if it looks like an ad (not same-origin)
+        try {
+          const href = a.href || '';
+          const isSameOrigin = href.startsWith(window.location.origin) || href.startsWith('/') || href === '';
+          if (!isSameOrigin) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            console.warn('[OnStream] Blocked external link click:', href);
+          }
+        } catch(_) {}
       }
     };
-    window.addEventListener('message', onMsg, true);
+    document.addEventListener('click', onLinkClick, true);
+
+    // 5. Watch for any new <script> tags injected by the iframe that try to navigate
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const node of m.addedNodes) {
+          if (node.tagName === 'SCRIPT') {
+            const src = node.src || '';
+            // Block known ad script domains
+            const adDomains = ['doubleclick', 'googlesyndication', 'adservice', 'popads', 'popcash', 'propellerads', 'mgid', 'trafficjunky', 'exoclick'];
+            if (adDomains.some(d => src.includes(d))) {
+              node.remove();
+              console.warn('[OnStream] Removed ad script:', src);
+            }
+          }
+        }
+      }
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+
     return () => {
       window.open = origOpen;
-      window.removeEventListener('message', onMsg, true);
+      window.location.assign  = origAssign;
+      window.location.replace = origReplace;
+      document.removeEventListener('click', onLinkClick, true);
+      observer.disconnect();
+      try {
+        if (origTopDesc) Object.defineProperty(window, 'top', origTopDesc);
+      } catch(_) {}
     };
   }, []);
 }
@@ -398,7 +460,7 @@ function Player({ item, onClose, onToggleFav, isFav, settings, onSaveSettings })
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontWeight:800,fontSize:14,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{getTitle(item)}</div>
           <div style={{color:'rgba(255,255,255,.4)',fontSize:11,display:'flex',alignItems:'center',gap:6}}>
-            <Ic.Shield /><span style={{color:'#4ade80',fontSize:11,fontWeight:600}}>Ads & redirects blocked</span>
+            <Ic.Shield /><span style={{color:'#4ade80',fontSize:11,fontWeight:600}}>Ad popups blocked</span>
             {isTV && <span>· S{season}E{episode}</span>}
           </div>
         </div>
@@ -419,8 +481,7 @@ function Player({ item, onClose, onToggleFav, isFav, settings, onSaveSettings })
           key={embedUrl}
           ref={ifrRef}
           src={embedUrl}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
-          allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+          allow="autoplay; fullscreen; picture-in-picture; encrypted-media; accelerometer; gyroscope"
           allowFullScreen
           style={{width:'100%',height:'100%',border:'none',display:'block',background:'#000'}}
           title={getTitle(item)}
@@ -466,7 +527,7 @@ function Player({ item, onClose, onToggleFav, isFav, settings, onSaveSettings })
       {panel === 'servers' && (
         <div style={{padding:'12px 14px',flexShrink:0}}>
           <p style={{color:'rgba(255,255,255,.35)',fontSize:11,marginBottom:10,display:'flex',alignItems:'center',gap:5}}>
-            <Ic.Shield /> Sandbox-blocked — no popups, no redirects, no tabs
+            <Ic.Shield /> window.open() and ad redirects are blocked via JavaScript
           </p>
           <div className="scroll-x" style={{display:'flex',gap:7,paddingBottom:4}}>
             {servers.map((s,i) => (
