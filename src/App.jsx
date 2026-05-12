@@ -4,7 +4,7 @@ import {
   getPopularShows, getTopShows, getAiringToday,
   getMoviesByGenre, getShowsByGenre,
   getMovieGenres, getTVGenres,
-  getShowDetail, getSeasonDetail,
+  getMovieDetail, getShowDetail, getSeasonDetail,
   searchAll, SERVERS, DOWNLOAD, SUBTITLE_LANGS,
   IMG, getTitle, getYear, getRating, getType,
 } from './utils/tmdb.js';
@@ -190,6 +190,10 @@ const Ic = {
   Clock:   ()=><svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>,
   WifiOff: ()=><svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a11 11 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>,
   Text:    ()=><svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="4,7 4,4 20,4 20,7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>,
+  Share:   ()=><svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,
+  Copy:    ()=><svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>,
+  Cast:    ()=><svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  Trailer: ()=><svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="23,7 16,12 23,17 23,7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>,
 };
 
 // ─── Tiny components ──────────────────────────────────────────────────────────
@@ -354,8 +358,8 @@ function Player({ item, onClose, onToggleFav, isFav, settings, onWatched }) {
   const initIdx = Math.max(0, servers.findIndex(s=>s.id===settings.defServer));
 
   const [srvIdx,   setSrvIdx]   = useState(initIdx);
-  const [season,   setSeason]   = useState(1);
-  const [episode,  setEpisode]  = useState(1);
+  const [season,   setSeason]   = useState(item._season || 1);
+  const [episode,  setEpisode]  = useState(item._episode || 1);
   const [seasons,  setSeasons]  = useState([]);
   const [episodes, setEpisodes] = useState([]);
   const [loadEps,  setLoadEps]  = useState(false);
@@ -742,6 +746,380 @@ function SettingsPage({ settings, onSave }) {
   );
 }
 
+// ─── Detail Page ─────────────────────────────────────────────────────────────
+function DetailPage({ item, onPlay, onBack, onToggleFav, isFav, settings, onWatched }) {
+  const isTV   = getType(item) === 'tv';
+  const [detail,   setDetail]   = useState(null);
+  const [detailTab, setDetailTab] = useState('episodes'); // episodes|overview|cast|related
+  const [season,   setSeason]   = useState(1);
+  const [episodes, setEpisodes] = useState([]);
+  const [loadEps,  setLoadEps]  = useState(false);
+  const [seasons,  setSeasons]  = useState([]);
+  const [copied,   setCopied]   = useState(false);
+  const [dlState,  setDlState]  = useState({}); // {epNum: 'quality'|'sub'|null}
+
+  // Load full detail
+  useEffect(() => {
+    const fn = isTV ? getShowDetail : getMovieDetail;
+    fn(item.id).then(d => {
+      setDetail(d);
+      if (isTV && d?.number_of_seasons) {
+        setSeasons(Array.from({ length: d.number_of_seasons }, (_, i) => i + 1));
+      }
+    });
+  }, [item.id, isTV]);
+
+  // Load episodes when season changes
+  useEffect(() => {
+    if (!isTV) return;
+    setLoadEps(true);
+    getSeasonDetail(item.id, season).then(d => {
+      setEpisodes(d?.episodes || []);
+      setLoadEps(false);
+    });
+  }, [item.id, season, isTV]);
+
+  const d = detail || item;
+  const backdrop = IMG.backdrop(d.backdrop_path);
+  const poster   = IMG.poster(d.poster_path);
+  const trailer  = detail?.videos?.results?.find(v => v.type === 'Trailer' && v.site === 'YouTube');
+  const cast     = detail?.credits?.cast?.slice(0, 10) || [];
+  const related  = detail?.similar?.results?.slice(0, 12) || [];
+
+  // Share link — embed URL that Vidmate and other apps can use
+  const shareUrl = isTV
+    ? `https://vidsrc.xyz/embed/tv?tmdb=${item.id}&season=${season}&episode=1`
+    : `https://vidsrc.xyz/embed/movie?tmdb=${item.id}`;
+
+  const handleShare = async () => {
+    const text = `Watch "${getTitle(item)}" on OnStream\n${shareUrl}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: getTitle(item), text, url: shareUrl }); }
+      catch {}
+    } else {
+      navigator.clipboard?.writeText(text).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    }
+  };
+
+  // Force download — try multiple methods
+  const forceDownload = (url, filename) => {
+    // Method 1: anchor click
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'video';
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    // Method 2: window open after short delay as fallback
+    setTimeout(() => { window.open(url, '_blank'); }, 300);
+  };
+
+  const getDlUrl = (quality, subLang, epNum = null, epSeason = season) => {
+    if (isTV && epNum) {
+      let url = `https://dl.vidsrc.vip/tv/${item.id}/${epSeason}/${epNum}?quality=${quality}`;
+      if (subLang && subLang !== 'none') url += `&sub_lang=${subLang}`;
+      return url;
+    }
+    let url = `https://dl.vidsrc.vip/movie/${item.id}?quality=${quality}`;
+    if (subLang && subLang !== 'none') url += `&sub_lang=${subLang}`;
+    return url;
+  };
+
+  const DL_Q  = ['1080p','720p','480p','360p'];
+  const DL_S  = [{code:'none',label:'No Subtitle'},{code:'en',label:'English'},{code:'es',label:'Spanish'},{code:'fr',label:'French'},{code:'ar',label:'Arabic'},{code:'hi',label:'Hindi'},{code:'pt',label:'Portuguese'},{code:'de',label:'German'}];
+
+  // Per-episode download state machine: null → 'quality' → 'sub' → done
+  const epDlKey  = (ep) => `ep_${ep}`;
+  const [epDlStep,  setEpDlStep]  = useState({}); // {key: 'quality'|'sub'}
+  const [epDlQual,  setEpDlQual]  = useState({}); // {key: quality}
+
+  const startEpDl = (epNum) => setEpDlStep(p => ({...p, [epDlKey(epNum)]: 'quality'}));
+  const pickEpQ   = (epNum, q) => { setEpDlQual(p => ({...p, [epDlKey(epNum)]: q})); setEpDlStep(p => ({...p, [epDlKey(epNum)]: 'sub'})); };
+  const pickEpSub = (epNum, sub) => {
+    const q = epDlQual[epDlKey(epNum)] || '720p';
+    forceDownload(getDlUrl(q, sub, epNum), `${getTitle(item)}-S${season}E${epNum}-${q}.mp4`);
+    setEpDlStep(p => ({...p, [epDlKey(epNum)]: null}));
+  };
+  const cancelEpDl = (epNum) => setEpDlStep(p => ({...p, [epDlKey(epNum)]: null}));
+
+  // Movie download state
+  const [movDlStep, setMovDlStep] = useState(null); // null|'quality'|'sub'
+  const [movDlQual, setMovDlQual] = useState(null);
+
+  const TABS = isTV
+    ? [{id:'episodes',label:'Episodes'},{id:'overview',label:'Overview'},{id:'cast',label:'Cast'},{id:'related',label:'Related'}]
+    : [{id:'overview',label:'Overview'},{id:'cast',label:'Cast'},{id:'related',label:'Related'}];
+
+  useEffect(() => {
+    setDetailTab(isTV ? 'episodes' : 'overview');
+  }, [isTV]);
+
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:2000,background:'#0a0a0f',overflowY:'auto',overflowX:'hidden'}}>
+
+      {/* Backdrop header */}
+      <div style={{position:'relative',height:'clamp(260px,55vw,420px)',flexShrink:0}}>
+        {backdrop && <img src={backdrop} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:'center 20%'}}/>}
+        <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,#0a0a0f 0%,rgba(10,10,15,.5) 60%,rgba(10,10,15,.2) 100%)'}}/>
+
+        {/* Back btn */}
+        <button className="btn" onClick={onBack}
+          style={{position:'absolute',top:16,left:16,background:'rgba(0,0,0,.6)',backdropFilter:'blur(8px)',border:'none',color:'#fff',borderRadius:8,padding:'8px 10px',display:'flex',alignItems:'center',zIndex:5}}>
+          <Ic.Back/>
+        </button>
+
+        {/* Share btn */}
+        <button className="btn" onClick={handleShare}
+          style={{position:'absolute',top:16,right:16,background:'rgba(0,0,0,.6)',backdropFilter:'blur(8px)',border:'none',color:'#fff',borderRadius:8,padding:'8px 12px',display:'flex',alignItems:'center',gap:6,fontSize:12,fontWeight:700,zIndex:5}}>
+          <Ic.Share/>{copied ? 'Copied!' : 'Share'}
+        </button>
+
+        {/* Poster + title overlay at bottom */}
+        <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'0 16px 16px',display:'flex',gap:12,alignItems:'flex-end',zIndex:3}}>
+          {poster && <img src={poster} alt="" style={{width:80,height:120,objectFit:'cover',borderRadius:8,flexShrink:0,boxShadow:'0 4px 20px rgba(0,0,0,.8)'}}/>}
+          <div style={{flex:1,minWidth:0}}>
+            <h1 style={{fontFamily:"'Bebas Neue'",fontSize:'clamp(22px,6vw,36px)',letterSpacing:1.2,lineHeight:1.1,marginBottom:5,textShadow:'0 2px 8px rgba(0,0,0,.9)'}}>{getTitle(d)}</h1>
+            <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+              <span style={{display:'flex',alignItems:'center',gap:3}}><Ic.Star/><b style={{color:'#f5c518',fontSize:12}}>{getRating(d)}</b></span>
+              <span style={{color:'rgba(255,255,255,.5)',fontSize:12}}>{getYear(d)}</span>
+              {isTV && d.number_of_seasons && <span style={{color:'rgba(255,255,255,.5)',fontSize:12}}>{d.number_of_seasons} Season{d.number_of_seasons>1?'s':''}</span>}
+              {d.runtime && <span style={{color:'rgba(255,255,255,.5)',fontSize:12}}>{Math.floor(d.runtime/60)}h {d.runtime%60}m</span>}
+              <span style={{background:'#e50914',color:'#fff',fontSize:9,fontWeight:800,padding:'2px 6px',borderRadius:3}}>HD</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div style={{padding:'14px 16px',display:'flex',gap:10}}>
+        {/* Watch / Play button */}
+        <button className="btn" onClick={() => onPlay(item)}
+          style={{flex:2,background:'#e50914',border:'none',color:'#fff',borderRadius:10,padding:'13px 0',fontSize:14,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',gap:8,boxShadow:'0 4px 16px rgba(229,9,20,.4)'}}>
+          <Ic.Play s={16}/> Watch Now
+        </button>
+
+        {/* Add to list */}
+        <button className="btn" onClick={() => onToggleFav(item)}
+          style={{flex:1,background:isFav?'rgba(74,222,128,.15)':'rgba(255,255,255,.08)',border:`1px solid ${isFav?'rgba(74,222,128,.4)':'rgba(255,255,255,.15)'}`,color:'#fff',borderRadius:10,padding:'13px 0',fontSize:13,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+          {isFav?<Ic.Check/>:<Ic.Plus/>}{isFav?'Saved':'My List'}
+        </button>
+
+        {/* Movie download trigger */}
+        {!isTV && (
+          <button className="btn" onClick={()=>setMovDlStep('quality')}
+            style={{flex:1,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.15)',color:'#fff',borderRadius:10,padding:'13px 0',fontSize:13,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+            <Ic.DL/> Download
+          </button>
+        )}
+
+        {/* Trailer */}
+        {trailer && (
+          <a href={`https://www.youtube.com/watch?v=${trailer.key}`} target="_blank" rel="noopener noreferrer"
+            style={{flex:1,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.15)',color:'#fff',borderRadius:10,padding:'13px 0',fontSize:13,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',gap:6,textDecoration:'none'}}>
+            <Ic.Trailer/> Trailer
+          </a>
+        )}
+      </div>
+
+      {/* Movie download flow */}
+      {!isTV && movDlStep === 'quality' && (
+        <div style={{margin:'0 16px 14px',padding:'14px',background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.09)',borderRadius:12}}>
+          <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>Select Quality</div>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {DL_Q.map(q=>(
+              <button key={q} className="btn" onClick={()=>{setMovDlQual(q);setMovDlStep('sub');}}
+                style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.15)',color:'#fff',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700}}>{q}</button>
+            ))}
+          </div>
+          <button className="btn" onClick={()=>setMovDlStep(null)} style={{marginTop:8,background:'none',border:'none',color:'rgba(255,255,255,.4)',fontSize:12}}>Cancel</button>
+        </div>
+      )}
+      {!isTV && movDlStep === 'sub' && (
+        <div style={{margin:'0 16px 14px',padding:'14px',background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.09)',borderRadius:12}}>
+          <div style={{fontWeight:700,fontSize:13,marginBottom:4}}>Select Subtitle · Quality: {movDlQual}</div>
+          <div style={{color:'rgba(255,255,255,.4)',fontSize:11,marginBottom:10}}>Vidmate tip: copy the share link and paste in Vidmate to download</div>
+          <div style={{display:'flex',gap:7,flexWrap:'wrap'}}>
+            {DL_S.map(s=>(
+              <button key={s.code} className="btn" onClick={()=>{forceDownload(getDlUrl(movDlQual,s.code),`${getTitle(item)}-${movDlQual}.mp4`);setMovDlStep(null);}}
+                style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.15)',color:'#fff',borderRadius:8,padding:'7px 12px',fontSize:12,fontWeight:600}}>{s.label}</button>
+            ))}
+          </div>
+          <button className="btn" onClick={()=>setMovDlStep('quality')} style={{marginTop:8,background:'none',border:'none',color:'rgba(255,255,255,.4)',fontSize:12}}>← Back</button>
+        </div>
+      )}
+
+      {/* Genres */}
+      {d.genres?.length > 0 && (
+        <div style={{padding:'0 16px 14px',display:'flex',gap:7,flexWrap:'wrap'}}>
+          {d.genres.map(g=>(
+            <span key={g.id} style={{background:'rgba(229,9,20,.1)',border:'1px solid rgba(229,9,20,.25)',color:'#e5a0a0',fontSize:11,padding:'3px 10px',borderRadius:20,fontWeight:600}}>{g.name}</span>
+          ))}
+        </div>
+      )}
+
+      {/* Share link box */}
+      <div style={{margin:'0 16px 14px',padding:'10px 12px',background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.07)',borderRadius:10}}>
+        <div style={{color:'rgba(255,255,255,.4)',fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:'uppercase',marginBottom:5}}>Share / External Download Link</div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <div style={{flex:1,color:'rgba(255,255,255,.6)',fontSize:11,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{shareUrl}</div>
+          <button className="btn" onClick={handleShare}
+            style={{background:'#e50914',border:'none',color:'#fff',borderRadius:7,padding:'6px 12px',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:5,flexShrink:0}}>
+            <Ic.Copy/>{copied?'Copied!':'Copy'}
+          </button>
+        </div>
+        <div style={{color:'rgba(255,255,255,.3)',fontSize:10,marginTop:5}}>Paste this link in Vidmate, IDM, or any download manager app</div>
+      </div>
+
+      {/* Detail tabs */}
+      <div style={{display:'flex',borderBottom:'1px solid rgba(255,255,255,.08)',margin:'0 16px'}}>
+        {TABS.map(t=>(
+          <button key={t.id} className="btn" onClick={()=>setDetailTab(t.id)}
+            style={{flex:1,background:'none',border:'none',color:detailTab===t.id?'#e50914':'rgba(255,255,255,.45)',padding:'10px 4px',fontSize:12,fontWeight:detailTab===t.id?800:500,borderBottom:detailTab===t.id?'2px solid #e50914':'2px solid transparent'}}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Episodes tab */}
+      {detailTab === 'episodes' && isTV && (
+        <div style={{padding:'14px 16px 32px'}}>
+          {/* Season selector */}
+          {seasons.length > 1 && (
+            <div style={{marginBottom:14}}>
+              <div className="scroll-x" style={{display:'flex',gap:7,paddingBottom:4}}>
+                {seasons.map(s=>(
+                  <button key={s} className={`ep-btn${season===s?' ep-active':''}`} onClick={()=>setSeason(s)}>Season {s}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Episodes list */}
+          {loadEps
+            ? <div style={{display:'flex',justifyContent:'center',padding:30}}><Spinner/></div>
+            : episodes.map(ep => {
+                const key     = epDlKey(ep.episode_number);
+                const dlStep  = epDlStep[key];
+                const thumb   = ep.still_path ? `https://image.tmdb.org/t/p/w300${ep.still_path}` : null;
+                const airDate = ep.air_date || 'TBA';
+                return (
+                  <div key={ep.episode_number} style={{marginBottom:16,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.07)',borderRadius:12,overflow:'hidden'}}>
+                    {/* Episode row */}
+                    <div style={{display:'flex',gap:12,padding:12}}>
+                      {/* Thumbnail — tap to play */}
+                      <div className="card" style={{position:'relative',flexShrink:0,width:130,height:78,borderRadius:8,overflow:'hidden',background:'#1a1a2e'}}
+                        onClick={()=>onPlay({...item,_season:season,_episode:ep.episode_number})}>
+                        {thumb
+                          ? <img src={thumb} alt={ep.name} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+                          : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',background:'#1a1a2e'}}><Ic.Play s={24}/></div>
+                        }
+                        <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,.35)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                          <div style={{background:'rgba(229,9,20,.9)',borderRadius:'50%',width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                            <Ic.Play s={14}/>
+                          </div>
+                        </div>
+                        <div style={{position:'absolute',bottom:4,left:6,color:'#fff',fontSize:11,fontWeight:800,textShadow:'0 1px 3px rgba(0,0,0,.9)'}}>
+                          {ep.episode_number}
+                        </div>
+                      </div>
+
+                      {/* Episode info */}
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:700,fontSize:13,color:'#fff',marginBottom:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ep.name}</div>
+                        <div style={{color:'rgba(255,255,255,.4)',fontSize:11,marginBottom:8}}>Released {airDate}</div>
+                        {ep.overview && <div style={{color:'rgba(255,255,255,.55)',fontSize:11,lineHeight:1.4,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{ep.overview}</div>}
+
+                        {/* Download button */}
+                        <button className="btn" onClick={()=>startEpDl(ep.episode_number)}
+                          style={{marginTop:8,background:'rgba(229,9,20,.12)',border:'1px solid rgba(229,9,20,.3)',color:'#e50914',borderRadius:7,padding:'6px 12px',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:5}}>
+                          <Ic.DL/> Download
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Per-episode download flow */}
+                    {dlStep === 'quality' && (
+                      <div style={{padding:'10px 12px 12px',borderTop:'1px solid rgba(255,255,255,.07)',background:'rgba(0,0,0,.3)'}}>
+                        <div style={{color:'rgba(255,255,255,.5)',fontSize:11,marginBottom:8}}>Select quality for Episode {ep.episode_number}</div>
+                        <div style={{display:'flex',gap:7,flexWrap:'wrap',marginBottom:6}}>
+                          {DL_Q.map(q=>(
+                            <button key={q} className="btn" onClick={()=>pickEpQ(ep.episode_number,q)}
+                              style={{background:'rgba(255,255,255,.09)',border:'1px solid rgba(255,255,255,.15)',color:'#fff',borderRadius:7,padding:'6px 12px',fontSize:12,fontWeight:700}}>{q}</button>
+                          ))}
+                        </div>
+                        <button className="btn" onClick={()=>cancelEpDl(ep.episode_number)} style={{background:'none',border:'none',color:'rgba(255,255,255,.35)',fontSize:11}}>Cancel</button>
+                      </div>
+                    )}
+                    {dlStep === 'sub' && (
+                      <div style={{padding:'10px 12px 12px',borderTop:'1px solid rgba(255,255,255,.07)',background:'rgba(0,0,0,.3)'}}>
+                        <div style={{color:'rgba(255,255,255,.5)',fontSize:11,marginBottom:8}}>Subtitle for Episode {ep.episode_number} · {epDlQual[key]}</div>
+                        <div style={{display:'flex',gap:7,flexWrap:'wrap',marginBottom:6}}>
+                          {DL_S.map(s=>(
+                            <button key={s.code} className="btn" onClick={()=>pickEpSub(ep.episode_number,s.code)}
+                              style={{background:'rgba(255,255,255,.09)',border:'1px solid rgba(255,255,255,.15)',color:'#fff',borderRadius:7,padding:'6px 12px',fontSize:12,fontWeight:700}}>{s.label}</button>
+                          ))}
+                        </div>
+                        <button className="btn" onClick={()=>setEpDlStep(p=>({...p,[key]:'quality'}))} style={{background:'none',border:'none',color:'rgba(255,255,255,.35)',fontSize:11}}>← Back</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+          }
+        </div>
+      )}
+
+      {/* Overview tab */}
+      {detailTab === 'overview' && (
+        <div style={{padding:'16px 16px 32px'}}>
+          <p style={{color:'rgba(255,255,255,.7)',fontSize:14,lineHeight:1.7}}>{d.overview || 'No overview available.'}</p>
+        </div>
+      )}
+
+      {/* Cast tab */}
+      {detailTab === 'cast' && (
+        <div style={{padding:'14px 16px 32px'}}>
+          {cast.length === 0
+            ? <p style={{color:'rgba(255,255,255,.4)',fontSize:13}}>No cast info available.</p>
+            : <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(88px,1fr))',gap:14}}>
+                {cast.map(c=>(
+                  <div key={c.id} style={{textAlign:'center'}}>
+                    <div style={{width:72,height:72,borderRadius:'50%',overflow:'hidden',background:'#1a1a2e',margin:'0 auto 6px'}}>
+                      {c.profile_path
+                        ? <img src={`https://image.tmdb.org/t/p/w92${c.profile_path}`} alt={c.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                        : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24}}>👤</div>
+                      }
+                    </div>
+                    <div style={{fontSize:11,fontWeight:700,color:'#fff',lineHeight:1.2}}>{c.name}</div>
+                    <div style={{fontSize:10,color:'rgba(255,255,255,.4)',lineHeight:1.2,marginTop:2}}>{c.character}</div>
+                  </div>
+                ))}
+              </div>
+          }
+        </div>
+      )}
+
+      {/* Related tab */}
+      {detailTab === 'related' && (
+        <div style={{padding:'14px 16px 32px'}}>
+          {related.length === 0
+            ? <p style={{color:'rgba(255,255,255,.4)',fontSize:13}}>No related titles.</p>
+            : <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(108px,1fr))',gap:13}}>
+                {related.filter(r=>r.poster_path).map(r=>(
+                  <Card key={r.id} item={r} onSelect={(ri)=>onPlay(ri)} isFav={false}/>
+                ))}
+              </div>
+          }
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Card ─────────────────────────────────────────────────────────────────────
 function Card({ item, onSelect, isFav }) {
   const [err,setErr]=useState(false);
@@ -1004,6 +1382,7 @@ export default function App() {
 
   const [tab,       setTab]      = useState('home');
   const [playing,   setPlaying]  = useState(null);
+  const [detail,    setDetail]   = useState(null);
   const [favorites, setFavs]     = useLocalStorage('onstream_favs_v3', []);
   const [settings,  setSettings] = useLocalStorage('onstream_settings_v1', DEFAULT_SETTINGS);
   const [recentlyWatched, setRecentlyWatched] = useLocalStorage('onstream_recent_v1', []);
@@ -1050,7 +1429,15 @@ export default function App() {
       return has?prev.filter(f=>f.id!==item.id):[{...item,media_type:getType(item)},...prev];
     });
   },[setFavs,toast_]);
-  const handleSelect = useCallback(item=>setPlaying({...item,media_type:getType(item)}),[]);
+  const handleSelect = useCallback((item) => {
+    setDetail({...item, media_type: getType(item)});
+  }, []);
+
+  const handlePlay = useCallback((item) => {
+    // Support _season/_episode hints from episode row taps
+    setDetail(null);
+    setPlaying({...item, media_type: getType(item)});
+  }, []);
   const isSearching  = searchQ.length > 1;
 
   const TABS = [
@@ -1063,6 +1450,18 @@ export default function App() {
 
   return (
     <div style={{background:'#0a0a0f',minHeight:'100dvh',color:'#fff',fontFamily:"'DM Sans',sans-serif",display:'flex',flexDirection:'column'}}>
+
+      {detail && !playing && (
+        <DetailPage
+          item={detail}
+          onPlay={handlePlay}
+          onBack={()=>setDetail(null)}
+          onToggleFav={toggleFav}
+          isFav={favorites.some(f=>f.id===detail.id)}
+          settings={settings}
+          onWatched={handleWatched}
+        />
+      )}
 
       {playing&&<Player item={playing} onClose={()=>setPlaying(null)} onToggleFav={toggleFav} isFav={favorites.some(f=>f.id===playing.id)} settings={settings} onWatched={handleWatched}/>}
 
