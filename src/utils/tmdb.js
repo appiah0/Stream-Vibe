@@ -85,23 +85,55 @@ export const SERVERS = {
 };
 
 // ─── Download Sources ─────────────────────────────────────────────────────────
-// Opens a direct download URL. User long-presses on mobile to save.
+// Multiple working download sources — if one fails, try the next
+// These generate direct download or redirect-to-download URLs
 export const DOWNLOAD = {
   movie: [
-    { name:'360p  · Fast',   url:(id)     => `https://dl.vidsrc.vip/movie/${id}?quality=360p` },
-    { name:'720p  · HD',     url:(id)     => `https://dl.vidsrc.vip/movie/${id}?quality=720p` },
-    { name:'1080p · Full HD',url:(id)     => `https://dl.vidsrc.vip/movie/${id}?quality=1080p` },
-    { name:'Subtitle (SRT)', url:(id)     => `https://dl.vidsrc.vip/movie/${id}/subtitles/en.srt`, isSub:true },
-    { name:'Subtitle (VTT)', url:(id)     => `https://dl.vidsrc.vip/movie/${id}/subtitles/en.vtt`, isSub:true },
+    { name:'VidSrc · 1080p',  url:(id) => `https://vidsrc.xyz/download/movie/${id}?quality=1080p` },
+    { name:'VidSrc · 720p',   url:(id) => `https://vidsrc.xyz/download/movie/${id}?quality=720p` },
+    { name:'VidSrc · 480p',   url:(id) => `https://vidsrc.xyz/download/movie/${id}?quality=480p` },
+    { name:'VidSrc · 360p',   url:(id) => `https://vidsrc.xyz/download/movie/${id}?quality=360p` },
   ],
   tv: [
-    { name:'360p  · Fast',   url:(id,s,e) => `https://dl.vidsrc.vip/tv/${id}/${s}/${e}?quality=360p` },
-    { name:'720p  · HD',     url:(id,s,e) => `https://dl.vidsrc.vip/tv/${id}/${s}/${e}?quality=720p` },
-    { name:'1080p · Full HD',url:(id,s,e) => `https://dl.vidsrc.vip/tv/${id}/${s}/${e}?quality=1080p` },
-    { name:'Subtitle (SRT)', url:(id,s,e) => `https://dl.vidsrc.vip/tv/${id}/${s}/${e}/subtitles/en.srt`, isSub:true },
-    { name:'Subtitle (VTT)', url:(id,s,e) => `https://dl.vidsrc.vip/tv/${id}/${s}/${e}/subtitles/en.vtt`, isSub:true },
+    { name:'VidSrc · 1080p',  url:(id,s,e) => `https://vidsrc.xyz/download/tv/${id}/${s}/${e}?quality=1080p` },
+    { name:'VidSrc · 720p',   url:(id,s,e) => `https://vidsrc.xyz/download/tv/${id}/${s}/${e}?quality=720p` },
+    { name:'VidSrc · 480p',   url:(id,s,e) => `https://vidsrc.xyz/download/tv/${id}/${s}/${e}?quality=480p` },
+    { name:'VidSrc · 360p',   url:(id,s,e) => `https://vidsrc.xyz/download/tv/${id}/${s}/${e}?quality=360p` },
   ],
 };
+
+// ─── External download links for Vidmate / IDM / external apps ────────────────
+// These are embed page URLs that external downloaders can scrape streams from
+export const getExternalDlLinks = (type, id, season=1, episode=1) => [
+  {
+    name: 'VidSrc Stream Page',
+    url: type==='tv'
+      ? `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${season}&episode=${episode}`
+      : `https://vidsrc.xyz/embed/movie?tmdb=${id}`,
+    hint: 'Paste in Vidmate or IDM'
+  },
+  {
+    name: 'VidLink Stream Page',
+    url: type==='tv'
+      ? `https://vidlink.pro/tv/${id}/${season}/${episode}`
+      : `https://vidlink.pro/movie/${id}`,
+    hint: 'Paste in Vidmate or IDM'
+  },
+  {
+    name: 'AutoEmbed Stream Page',
+    url: type==='tv'
+      ? `https://autoembed.co/tv/tmdb/${id}-${season}-${episode}`
+      : `https://autoembed.co/movie/tmdb/${id}`,
+    hint: 'Paste in Vidmate or IDM'
+  },
+  {
+    name: 'MultiEmbed Stream Page',
+    url: type==='tv'
+      ? `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${season}&e=${episode}`
+      : `https://multiembed.mov/?video_id=${id}&tmdb=1`,
+    hint: 'Paste in Vidmate or IDM'
+  },
+];
 
 // ─── Subtitle languages for in-app display ────────────────────────────────────
 export const SUBTITLE_LANGS = [
